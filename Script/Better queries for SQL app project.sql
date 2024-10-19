@@ -43,7 +43,7 @@ SELECT
 	,	a.primary_genre
 	,	a.content_rating
 	,	p.content_rating
-	,	ROUND(AVG(a.rating + p.rating)/2,0) AS avg_rating
+	,	ROUND(ROUND(a.rating + p.rating),0)/2 AS avg_rating
 	,	a.name
 	,	ROUND(AVG(a.price +	CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2) AS avg_price
 	,	(CASE WHEN ROUND(AVG(a.rating + p.rating)/2,0)=5 THEN 'predicted life 11 years'
@@ -225,8 +225,25 @@ ON a.name=p.name
 GROUP BY a.name,a.price,p.price,p.review_count,a.review_count
 order by rating desc,
 		 r_count desc
-limit 10 )
-
+limit 25 )
+----------------------------------------------------------------------------------------
+SELECT
+		ROUND(AVG((CAST(REPLACE(a.price::TEXT, '$', '') AS NUMERIC) + CAST(REPLACE(p.price::TEXT, '$', '') AS NUMERIC))/2),2)AS avg_price
+	,	a.name
+	,	a.primary_genre
+	,	ROUND(AVG((CAST(a.review_count AS INTEGER) + CAST(p.review_count AS INTEGER))/2.0),2) AS avg_count
+	,	ROUND(ROUND(a.rating + p.rating),0)/2 AS avg_rating
+	,	a.primary_genre
+	,	COUNT(*) AS genre_count
+	,	ROUND((COUNT(*) * 100.0) / SUM(COUNT(*)) OVER (), 2) AS genre_percentage
+	,	(CASE WHEN ROUND(AVG((CAST(REPLACE(a.price::TEXT, '$', '') AS NUMERIC) + CAST(REPLACE(p.price::TEXT, '$', '') AS NUMERIC))/2),2)<1 THEN 10000
+			   WHEN ROUND(AVG((CAST(REPLACE(a.price::TEXT, '$', '') AS NUMERIC) + CAST(REPLACE(p.price::TEXT, '$', '') AS NUMERIC))/2),2)<2 THEN 10000
+			   ELSE NULL END) AS total_price
+FROM app_store_apps AS a
+	INNER JOIN play_store_apps AS p
+		ON a.name=p.name
+GROUP BY a.name, a.primary_genre, a.rating, p.rating
+ORDER by avg_rating DESC, avg_count DESC, genre_count DESC
 
 
 
