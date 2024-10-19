@@ -39,7 +39,10 @@ ORDER BY avg_price DESC, avg_rating DESC
 --add where statement where avg_rating>4.5 and avg price =1 and 0 showing shelf life
 
 SELECT
-		ROUND(AVG(a.rating + p.rating)/2,0) AS avg_rating
+		a.primary_genre
+	,	a.content_rating
+	,	p.content_rating
+	,	ROUND(AVG(a.rating + p.rating)/2,0) AS avg_rating
 	,	a.name
 	,	ROUND(AVG(a.price +	CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2) AS avg_price
 	,	(CASE WHEN ROUND(AVG(a.rating + p.rating)/2,0)=5 THEN 'predicted life 11 years'
@@ -50,14 +53,15 @@ SELECT
 			  WHEN ROUND(AVG(a.rating + p.rating)/2,0)=0 THEN 'predicted life 1 years'
 			  END) AS condition1
 	,	(CASE WHEN ROUND(AVG(a.price +	CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2)<1 THEN '10000'
-			  WHEN ROUND(AVG(a.price +	CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2)=0 THEN '10000' END) AS Conditions2
+			  WHEN ROUND(AVG(a.price +	CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2)=0 THEN '10000' ELSE 'too expensive' END) AS Conditions2
 	,	(CASE WHEN ROUND(AVG(a.price + CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2)<=1 	THEN 'Recommended Purchase' 
 			WHEN ROUND(AVG(a.price + CAST(REPLACE(p.price, '$', '') AS NUMERIC)),2)=0 THEN 'Recommended Purchase' 
-			WHEN ROUND(AVG(a.rating + p.rating)/2,0)=5 THEN 'Recommended Purchase' END) AS Recommendations
+			WHEN ROUND(AVG(a.rating + p.rating)/2,0)=5 THEN 'Recommended Purchase' ELSE 'Not Recommended' END) AS Recommendations
 FROM app_store_apps AS a
 	INNER JOIN play_store_apps AS p
 		ON a.name=p.name
-GROUP BY a.name, a.rating, p.rating, a.price, p.price
+	WHERE p.content_rating='Everyone'
+GROUP BY a.name, a.rating, p.rating, a.price, p.price, a.primary_genre, a.content_rating, p.content_rating
 ORDER BY avg_price ASC, avg_rating DESC
 ---------------------------------------------------------------------------------------
 
