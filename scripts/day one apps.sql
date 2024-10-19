@@ -198,13 +198,14 @@ join play_store_apps psa ON combined.name=psa.name
 
 
 -- different smaller queries
-WITH combined
+
  (SELECT name,ROUND(AVG(rating),1) as avg_rating,CAST(price AS NUMERIC) AS price, CAST(review_count as integer) as review_count 
     FROM app_store_apps
 	WHERE rating > 4.5
 	GROUP BY content_rating,name,rating,price,review_count)
 
     UNION ALL
+	
 
 (SELECT name,ROUND(AVG(rating),1) as avg_rating,CAST(REPLACE(price, '$', '') AS DECIMAL) AS price, Review_count
     FROM play_store_apps
@@ -223,3 +224,73 @@ select name,rating
 from play_store_apps
 where name ILIKE '%Geo%'
 --5.0
+
+
+--another try
+ (SELECT name,ROUND(AVG(rating),1) as avg_rating,CAST(price AS NUMERIC) AS price, CAST(review_count as integer) as review_count 
+    FROM app_store_apps
+	WHERE rating > 4.5
+	GROUP BY content_rating,name,rating,price,review_count)
+
+    UNION ALL
+	
+
+(SELECT name,ROUND(AVG(rating),1) as avg_rating,CAST(REPLACE(price, '$', '') AS DECIMAL) AS price, Review_count
+    FROM play_store_apps
+	WHERE rating > 4.5
+	GROUP BY content_rating,name,rating,price,review_count)
+	ORDER BY avg_rating DESC, review_count DESC
+	LIMIT  15
+
+--checking on ZC
+SELECT *
+FROM app_store_apps
+where name ILIKE '%Zombie Catchers%'
+
+SELECT *
+FROM play_store_apps
+where name ILIKE '%Zombie Catchers%'
+
+
+-- new try!!GOOD!!
+
+WITH price_comparison AS(
+SELECT aps.name as aps_name,psa.name as psa_name,GREATEST( aps.price,CAST(REPLACE(psa.price, '$', '') AS DECIMAL)) as price,-- ROUND(AVG(aps.rating + psa.rating)/2,1) as avg_rating 
+ROUND((aps.rating + psa.rating) / 2, 1) AS avg_rating
+
+FROM app_store_apps  as aps
+INNER JOIN play_store_apps as psa
+ON aps.name=psa.name
+--where aps.name ILIKE '%Geometry Dash Lite%'
+--and psa.name ILIKE '%Geo%'
+GROUP BY aps.name,psa.name,aps.price,psa.price)
+
+SELECT aps_name,
+	   psa_name,
+	   price,
+	   avg_rating,
+	  
+	   CASE WHEN price = 0 THEN price + 10000
+	   		WHEN price <= 1.00 then price *10000
+			WHEN price >= 1.00 THEN price *10000
+			END as Purchase_Price,
+			9000 as Monthly_Revenue,
+		CASE
+		 WHEN avg_rating >= 4.7 and price = 0.00
+		 THEN 'advisable purchase'
+		 ELSE 'not recommended'
+		 END as Purchase_recommendation
+FROM price_comparison
+ORDER BY avg_rating DESC
+
+
+-
+
+
+SELECT *
+FROM play_store_apps
+WHERE name ILIKE'%Cytus%'
+
+Select *
+FROM app_store_apps
+WHERE name ILIKE '%Cytus%'
