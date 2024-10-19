@@ -255,15 +255,15 @@ where name ILIKE '%Zombie Catchers%'
 -- new try!!GOOD!!
 
 WITH price_comparison AS(
-SELECT aps.name as aps_name,psa.name as psa_name,GREATEST( aps.price,CAST(REPLACE(psa.price, '$', '') AS DECIMAL)) as price,-- ROUND(AVG(aps.rating + psa.rating)/2,1) as avg_rating 
-ROUND((aps.rating + psa.rating) / 2, 1) AS avg_rating
+SELECT aps.name as aps_name,psa.name as psa_name,GREATEST( aps.price,CAST(REPLACE(psa.price, '$', '') AS DECIMAL)) as price, ROUND(round(aps.rating+psa.rating),0)/2 as avg_rating
+--ROUND((aps.rating + psa.rating)/2,1) as avg_rating 
 
 FROM app_store_apps  as aps
 INNER JOIN play_store_apps as psa
 ON aps.name=psa.name
 --where aps.name ILIKE '%Geometry Dash Lite%'
 --and psa.name ILIKE '%Geo%'
-GROUP BY aps.name,psa.name,aps.price,psa.price)
+GROUP BY aps.name,psa.name,aps.price,psa.price,aps.rating,psa.rating)
 
 SELECT aps_name,
 	   psa_name,
