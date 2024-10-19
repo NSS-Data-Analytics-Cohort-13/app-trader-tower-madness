@@ -72,12 +72,51 @@ order by rating desc,
 limit 10
 ),
 overlapping_apps AS (
-    SELECT 
-        a.name
-    FROM 
-        app_store_apps a
-    JOIN 
-        play_store_apps p ON a.name = p.name
+    SELECT  a.name
+	,	ROUND(AVG(a.rating + p.rating)/2,1) as rating
+	,	GREATEST(a.price,CAST(REPLACE(p.price, '$', '') AS DECIMAL)) as price
+	,	greatest(p.review_count,cast(a.review_count as integer)) as r_count
+--	,	p.review_count::integer as r_count
+	,	'bothtables' as table_name,
+	case 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 4.5 and 4.9 then 10 
+   
+		when ROUND(AVG(a.rating + p.rating)/2,2) between 5.0 and 5.4 then 11
+        else 0 
+    end AS applife_years,
+	    (case 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 4.5 and 4.9 then 1*9000*12 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 5.0 and 5.4 then 1*9000*12 
+        else 0 
+    end ) as annual_earnings,
+	(case 
+        when cast(replace(p.price, '$', '') as decimal)= 0.0 then cast(replace(p.price, '$', '') AS decimal) + 10000 
+        else cast(replace(p.price, '$', '') as decimal) * 10000 
+    end) as adjusted_purchase_price,
+	-- calculate profit
+	((case 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 4.5 and 4.9 then 1*9000*12 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 5.0 and 5.4 then 1*9000*12 
+        else 0 
+    end) - 
+    (case 
+        when cast(replace(p.price, '$', '') AS decimal) = 0 then cast(replace(p.price, '$', '') AS decimal) + 10000 
+        else cast(replace(p.price, '$', '') AS decimal) * 10000 
+    end)) as annual_profit,
+	(case 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 4.5 and 4.9 then 10*9000*12 
+        when ROUND(AVG(a.rating + p.rating)/2,2) between 5.0 and 5.4 then 11*9000*12 
+        else 0 
+    end ) as applife_profit
+	
+FROM app_store_apps  as a
+INNER JOIN play_store_apps  p
+ON a.name=p.name
+--where ROUND(AVG(a.rating + p.rating)/2,2) >4.5
+GROUP BY a.name,a.price,p.price,p.review_count,a.review_count
+order by rating desc,
+		 r_count desc
+limit 10 
 )
 
 -- Unique apps from app_store_apps

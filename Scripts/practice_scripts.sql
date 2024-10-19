@@ -112,6 +112,7 @@ ORDER BY
     average_rating DESC;
 
 -----------merging query to get name,reviewcount,price,rating desc by rating,review_count
+------ query starts here 
 (select a.name
 	,	a.rating
 	,	cast(a.price as numeric) as numeric_price  
@@ -121,8 +122,8 @@ ORDER BY
 		 when a.rating between 5.0 and 5.4 then 11 
 		 else 0
 		 end )as applife_years,
-	(case when a.rating between 4.5 and 4.9 then 10*4000*12
-		  when a.rating between 5.0 and 5.4 then 11*4000*12
+	(case when a.rating between 4.5 and 4.9 then 1*4000*12
+		  when a.rating between 5.0 and 5.4 then 1*4000*12
 		  else 0
 		  end) as annual_earnings,
 	(case when a.price =0 then a.price+10000
@@ -130,14 +131,19 @@ ORDER BY
 		  end) as adjusted_purchase_price,
 	  -- calculate profit		  
 	((CASE 							
-        WHEN a.rating between 4.5 and 4.9 then 10*4000*12 
-        WHEN a.rating between 5.0 and 5.4 then 11*4000*12 
+        WHEN a.rating between 4.5 and 4.9 then 1*4000*12 
+        WHEN a.rating between 5.0 and 5.4 then 1*4000*12 
         ELSE 0 
     END) - 
     (CASE 
         WHEN a.price = 0 THEN a.price + 10000 
         ELSE a.price * 10000 
-    END)) AS profit		 
+    END)) AS annual_profit	,
+	(case 
+        when a.rating between 4.5 and 4.9 then 10*4000*12 
+        when a.rating between 5.0 and 5.4 then 11*4000*12 
+        else 0 
+    end ) as applife_profit
 from app_store_apps a
 where 
 rating >4.5
@@ -160,8 +166,8 @@ union all
         else 0 
     end AS applife_years,
     (case 
-        when p.rating between 4.5 and 4.9 then 10*4000*12 
-        when p.rating between 5.0 and 5.4 then 11*4000*12 
+        when p.rating between 4.5 and 4.9 then 1*4000*12 
+        when p.rating between 5.0 and 5.4 then 1*4000*12 
         else 0 
     end ) as annual_earnings,
     (case 
@@ -170,14 +176,19 @@ union all
     end) as adjusted_purchase_price,
     -- calculate profit
     ((case 
-        when p.rating between 4.5 and 4.9 then 10*4000*12 
-        when p.rating between 5.0 and 5.4 then 11*4000*12 
+        when p.rating between 4.5 and 4.9 then 1*4000*12 
+        when p.rating between 5.0 and 5.4 then 1*4000*12 
         else 0 
     end) - 
     (case 
         when cast(replace(p.price, '$', '') AS decimal) = 0 then cast(replace(p.price, '$', '') AS decimal) + 10000 
         else cast(replace(p.price, '$', '') AS decimal) * 10000 
-    end)) as profit
+    end)) as annual_profit,
+	(case 
+        when p.rating between 4.5 and 4.9 then 10*4000*12 
+        when p.rating between 5.0 and 5.4 then 11*4000*12 
+        else 0 
+    end ) as applife_profit
 from  play_store_apps p
 where 
 rating >4.5
@@ -188,25 +199,21 @@ limit 10) --query ends here for play_store table
 
 union all
 ------  ----------- join query for both tables common app names
---WITH price_comparison AS(
 (SELECT  a.name
-	,	ROUND(AVG(a.rating + p.rating)/2,2) as rating
+--	,	ROUND(AVG(a.rating + p.rating)/2,1) as rating     
+	,	round(2*((a.rating + p.rating)/2))/2 as rating
 	,	GREATEST(a.price,CAST(REPLACE(p.price, '$', '') AS DECIMAL)) as price
 	,	greatest(p.review_count,cast(a.review_count as integer)) as r_count
 --	,	p.review_count::integer as r_count
 	,	'bothtables' as table_name,
 	case 
-        when ROUND(AVG(a.rating + p.rating)/2,2) = 4.5 then 10 
-        when ROUND(AVG(a.rating + p.rating)/2,2) = 4.6 then 120/12--'10y 2 months=120 months'
-		when ROUND(AVG(a.rating + p.rating)/2,2) = 4.7 then 10--'10y 4 months'
-		when ROUND(AVG(a.rating + p.rating)/2,2) = 4.8 then 10--'10y 6 months'
-		when ROUND(AVG(a.rating + p.rating)/2,2) = 4.9 then 10--'10y 8 months'
-		when ROUND(AVG(a.rating + p.rating)/2,2) = 5 then 11
+        when round(2*((a.rating + p.rating)/2))/2 = 4.5 then 10 
+    	when round(2*((a.rating + p.rating)/2))/2 =5.0 then 11
         else 0 
     end AS applife_years,
 	    (case 
-        when ROUND(AVG(a.rating + p.rating)/2,2) between 4.5 and 4.9 then 1*9000*12 
-        when ROUND(AVG(a.rating + p.rating)/2,2) between 5.0 and 5.4 then 1*9000*12 
+        when round(2*((a.rating + p.rating)/2))/2 = 4.5  then 1*9000*12 
+        when round(2*((a.rating + p.rating)/2))/2 = 5.0  then 1*9000*12 
         else 0 
     end ) as annual_earnings,
 	(case 
@@ -215,24 +222,32 @@ union all
     end) as adjusted_purchase_price,
 	-- calculate profit
 	((case 
-        when ROUND(AVG(a.rating + p.rating)/2,2) between 4.5 and 4.9 then 10*4000*12 
-        when ROUND(AVG(a.rating + p.rating)/2,2) between 5.0 and 5.4 then 11*4000*12 
+        when round(2*((a.rating + p.rating)/2))/2 = 4.5  then 1*9000*12 
+        when round(2*((a.rating + p.rating)/2))/2 = 5.0  then 1*9000*12 
         else 0 
     end) - 
     (case 
         when cast(replace(p.price, '$', '') AS decimal) = 0 then cast(replace(p.price, '$', '') AS decimal) + 10000 
         else cast(replace(p.price, '$', '') AS decimal) * 10000 
-    end)) as profit
+    end)) as annual_profit,
+	(case 
+        when round(2*((a.rating + p.rating)/2))/2 = 4.5  then 10*9000*12 
+        when round(2*((a.rating + p.rating)/2))/2 = 5.0  then 11*9000*12 
+        else 0 
+    end ) as applife_profit
 	
 FROM app_store_apps  as a
 INNER JOIN play_store_apps  p
 ON a.name=p.name
 --where ROUND(AVG(a.rating + p.rating)/2,2) >4.5
-GROUP BY a.name,a.price,p.price,p.review_count,a.review_count
+GROUP BY a.name,a.price,p.price,p.review_count,a.review_count,a.rating,p.rating--,applife_years,annual_earnings
+--,adjusted_purchase_price,annual_profit,applife_profit
 order by rating desc,
 		 r_count desc
-limit 10 )
---)
+limit 25)
+--)-------------query ends here 
+
+
 SELECT aps_name,
 	   psa_name,
 	   price,
